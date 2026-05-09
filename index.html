@@ -1,0 +1,476 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0a0c0f;--bg2:#111418;--bg3:#181d23;
+    --border:#1e2830;--border2:#253040;
+    --green:#00ff9d;--green-dim:#00c87a;--green-dark:#003320;
+    --amber:#ffb800;--red:#ff3b3b;--blue:#3af;
+    --text:#c8d8e8;--text-dim:#5a7080;
+    --font-mono:'Share Tech Mono',monospace;
+    --font-ui:'Rajdhani',sans-serif;
+  }
+  body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size:15px;padding:0}
+  .app{width:100%;max-width:700px;margin:0 auto;padding:16px;background:var(--bg)}
+
+  .header{display:flex;align-items:center;gap:12px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:14px}
+  .logo{font-family:var(--font-mono);font-size:11px;color:var(--green);letter-spacing:2px;text-transform:uppercase}
+  .logo span{color:var(--text-dim)}
+  .status-dot{width:8px;height:8px;border-radius:50%;background:var(--text-dim);margin-left:auto;transition:background 0.3s}
+  .status-dot.active{background:var(--green);box-shadow:0 0 8px var(--green)}
+  .status-dot.alert{background:var(--red);animation:pulse-red 0.5s infinite alternate}
+  @keyframes pulse-red{to{box-shadow:0 0 12px var(--red)}}
+  .status-label{font-family:var(--font-mono);font-size:10px;color:var(--text-dim);letter-spacing:1px}
+
+  .main-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+  .panel{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:14px}
+  .panel-title{font-family:var(--font-mono);font-size:10px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
+
+  canvas{width:100%;display:block;background:var(--bg3);border:1px solid var(--border);border-radius:4px}
+
+  .sonar-wrap{position:relative;display:flex;align-items:center;justify-content:center}
+  #sonar-canvas{border-radius:50%;border:1px solid var(--border2)}
+
+  .metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .metric{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:8px 10px}
+  .metric-label{font-family:var(--font-mono);font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:3px}
+  .metric-val{font-family:var(--font-mono);font-size:18px;color:var(--green);font-weight:400}
+  .metric-val.warn{color:var(--amber)}
+  .metric-val.alert{color:var(--red)}
+  .metric-unit{font-size:10px;color:var(--text-dim);margin-left:2px}
+
+  .event-log{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:12px;height:120px;overflow-y:auto}
+  .event-log::-webkit-scrollbar{width:3px}
+  .event-log::-webkit-scrollbar-track{background:var(--bg3)}
+  .event-log::-webkit-scrollbar-thumb{background:var(--border2)}
+  .log-line{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);padding:2px 0;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:baseline}
+  .log-line:last-child{border-bottom:none}
+  .log-time{color:var(--text-dim);min-width:80px;flex-shrink:0}
+  .log-msg{flex:1}
+  .log-line.info .log-msg{color:var(--text)}
+  .log-line.ok .log-msg{color:var(--green-dim)}
+  .log-line.warn .log-msg{color:var(--amber)}
+  .log-line.alert .log-msg{color:var(--red)}
+
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .btn{font-family:var(--font-mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:9px 18px;border-radius:4px;border:1px solid var(--border2);background:var(--bg3);color:var(--text-dim);cursor:pointer;transition:all 0.15s}
+  .btn:hover{border-color:var(--green);color:var(--green)}
+  .btn.primary{border-color:var(--green-dim);color:var(--green);background:var(--green-dark)}
+  .btn.primary:hover{background:#004a2a}
+  .btn.danger{border-color:var(--red);color:var(--red);background:#1a0808}
+  .btn:disabled{opacity:0.3;cursor:not-allowed}
+
+  .freq-wrap{display:flex;align-items:center;gap:8px;margin-left:auto}
+  .freq-label{font-family:var(--font-mono);font-size:10px;color:var(--text-dim)}
+  input[type=range]{width:90px;height:3px;accent-color:var(--green)}
+  .freq-val{font-family:var(--font-mono);font-size:11px;color:var(--green);min-width:52px}
+
+  .state-bar{display:flex;gap:6px;align-items:center;margin-bottom:12px}
+  .state-pill{font-family:var(--font-mono);font-size:10px;letter-spacing:1px;padding:4px 10px;border-radius:2px;border:1px solid var(--border);color:var(--text-dim)}
+  .state-pill.active{border-color:var(--green-dim);color:var(--green);background:var(--green-dark)}
+  .state-pill.alert-pill{border-color:var(--red);color:var(--red);background:#1a0808}
+  .threshold-wrap{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .threshold-label{font-family:var(--font-mono);font-size:10px;color:var(--text-dim)}
+
+  .full-panel{grid-column:span 2}
+  .alert-banner{display:none;background:#1a0808;border:1px solid var(--red);border-radius:4px;padding:10px 14px;font-family:var(--font-mono);font-size:12px;color:var(--red);letter-spacing:1px;margin-bottom:12px;text-align:center}
+  .alert-banner.show{display:block;animation:flash-border 0.4s 3}
+  @keyframes flash-border{0%,100%{border-color:var(--red)}50%{border-color:transparent}}
+</style>
+
+<div class="app">
+  <h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden">Acoustic Room Sentinel — uses microphone and speaker to detect room presence changes via near-ultrasonic sonar pulses</h2>
+  <div class="header">
+    <div>
+      <div class="logo">ACOUSTIC SENTINEL <span>// v1.0</span></div>
+      <div class="logo" style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-top:2px">near-ultrasonic presence detection</div>
+    </div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+      <div class="status-label" id="state-label">OFFLINE</div>
+      <div class="status-dot" id="state-dot"></div>
+    </div>
+  </div>
+
+  <div class="alert-banner" id="alert-banner">⚠ INTRUSION DETECTED — ACOUSTIC SIGNATURE CHANGED</div>
+
+  <div class="state-bar">
+    <div class="state-pill" id="pill-idle">IDLE</div>
+    <div class="state-pill" id="pill-baseline">CALIBRATING</div>
+    <div class="state-pill" id="pill-scan">SCANNING</div>
+    <div class="threshold-wrap">
+      <div class="threshold-label">SENSITIVITY</div>
+      <input type="range" id="sensitivity" min="1" max="20" value="6" style="width:70px">
+      <div class="freq-val" id="sens-val" style="min-width:30px">6</div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <div class="panel">
+      <div class="panel-title">SONAR SWEEP</div>
+      <div class="sonar-wrap">
+        <canvas id="sonar-canvas" width="220" height="220"></canvas>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">FREQUENCY SPECTRUM</div>
+      <canvas id="spec-canvas" width="300" height="220"></canvas>
+    </div>
+    <div class="panel full-panel">
+      <div class="panel-title">ECHO DELTA — DEVIATION FROM BASELINE</div>
+      <canvas id="delta-canvas" width="650" height="90"></canvas>
+    </div>
+  </div>
+
+  <div class="event-log" id="event-log">
+    <div class="log-line info"><span class="log-time">--:--:--</span><span class="log-msg">System ready. Press CALIBRATE to begin.</span></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn primary" id="btn-calibrate">Calibrate Baseline</button>
+    <button class="btn" id="btn-scan" disabled>Start Scanning</button>
+    <button class="btn danger" id="btn-stop" disabled>Stop</button>
+    <div class="freq-wrap">
+      <div class="freq-label">PULSE FREQ</div>
+      <input type="range" id="freq-slider" min="16000" max="20000" step="250" value="18500">
+      <div class="freq-val" id="freq-display">18.5 kHz</div>
+    </div>
+  </div>
+
+  <div class="metrics" style="margin-top:12px">
+    <div class="metric"><div class="metric-label">ECHO RMS</div><div class="metric-val" id="m-rms">---<span class="metric-unit"></span></div></div>
+    <div class="metric"><div class="metric-label">DELTA vs BASELINE</div><div class="metric-val" id="m-delta">---<span class="metric-unit"></span></div></div>
+    <div class="metric"><div class="metric-label">BASELINE SAMPLES</div><div class="metric-val" id="m-samples">0<span class="metric-unit"></span></div></div>
+    <div class="metric"><div class="metric-label">EVENTS DETECTED</div><div class="metric-val" id="m-events">0<span class="metric-unit"></span></div></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let audioCtx, analyser, micStream, oscNode, gainNode;
+let baseline = null, baselineSamples = 0;
+let scanning = false, calibrating = false;
+let eventCount = 0;
+let alertCooldown = 0;
+let animFrame;
+let sonarAngle = 0;
+let sonarTrails = [];
+let deltaHistory = new Float32Array(300).fill(0);
+const FFT = 2048;
+
+const logEl = $('event-log');
+function log(msg, type='info'){
+  const now = new Date();
+  const ts = now.toTimeString().slice(0,8);
+  const el = document.createElement('div');
+  el.className = `log-line ${type}`;
+  el.innerHTML = `<span class="log-time">${ts}</span><span class="log-msg">${msg}</span>`;
+  logEl.appendChild(el);
+  logEl.scrollTop = logEl.scrollHeight;
+  while(logEl.children.length > 50) logEl.removeChild(logEl.firstChild);
+}
+
+function setPill(name){
+  ['idle','baseline','scan'].forEach(p => $('pill-'+p).className='state-pill');
+  if(name) $('pill-'+name).className = 'state-pill active';
+}
+
+function setDot(state){
+  const dot = $('state-dot');
+  dot.className = 'status-dot' + (state==='active' ? ' active' : state==='alert' ? ' alert' : '');
+  $('state-label').textContent = {active:'ACTIVE',alert:'⚠ ALERT',offline:'OFFLINE',calibrating:'CALIBRATING'}[state]||'OFFLINE';
+}
+
+async function initAudio(){
+  if(audioCtx) return true;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    micStream = stream;
+    const src = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = FFT;
+    analyser.smoothingTimeConstant = 0.6;
+    src.connect(analyser);
+    log('Microphone acquired. Sample rate: '+audioCtx.sampleRate+'Hz','ok');
+    return true;
+  } catch(e){
+    log('Microphone denied: '+e.message,'alert');
+    return false;
+  }
+}
+
+function startPulse(freq){
+  stopPulse();
+  oscNode = audioCtx.createOscillator();
+  gainNode = audioCtx.createGain();
+  oscNode.type = 'sine';
+  oscNode.frequency.value = freq;
+  gainNode.gain.value = 0.4;
+  oscNode.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  oscNode.start();
+}
+
+function stopPulse(){
+  if(oscNode){ try{oscNode.stop()}catch(e){} oscNode=null; }
+  if(gainNode){ gainNode.disconnect(); gainNode=null; }
+}
+
+function getSpectrum(){
+  const data = new Float32Array(analyser.frequencyBinCount);
+  analyser.getFloatFrequencyData(data);
+  return data;
+}
+
+function getRMS(spectrum, binStart, binEnd){
+  let sum = 0, count = 0;
+  for(let i=binStart; i<binEnd && i<spectrum.length; i++){
+    const lin = Math.pow(10, spectrum[i]/20);
+    sum += lin*lin; count++;
+  }
+  return count > 0 ? Math.sqrt(sum/count) : 0;
+}
+
+function freqToBin(freq){
+  return Math.round(freq / (audioCtx.sampleRate / FFT));
+}
+
+$('freq-slider').oninput = function(){
+  const v = parseInt(this.value);
+  $('freq-display').textContent = (v/1000).toFixed(2)+' kHz';
+  if(oscNode) oscNode.frequency.value = v;
+};
+
+$('sensitivity').oninput = function(){
+  $('sens-val').textContent = this.value;
+};
+
+$('btn-calibrate').onclick = async function(){
+  if(!await initAudio()) return;
+  const freq = parseInt($('freq-slider').value);
+  startPulse(freq);
+  log('Starting baseline calibration at '+( freq/1000).toFixed(2)+'kHz...','info');
+  setDot('calibrating');
+  setPill('baseline');
+  calibrating = true; scanning = false;
+  baseline = null; baselineSamples = 0;
+  $('btn-calibrate').disabled = true;
+  $('btn-scan').disabled = true;
+  $('btn-stop').disabled = false;
+  $('m-samples').textContent = '0';
+
+  let samples = [];
+  const CALIBRATE_SECS = 5;
+  const INTERVAL = 100;
+  const TOTAL = (CALIBRATE_SECS*1000)/INTERVAL;
+  let count = 0;
+  const timer = setInterval(()=>{
+    if(!calibrating){ clearInterval(timer); return; }
+    const sp = getSpectrum();
+    const b0 = freqToBin(freq-800), b1 = freqToBin(freq+800);
+    const rms = getRMS(sp, b0, b1);
+    samples.push(rms);
+    count++;
+    $('m-samples').textContent = count;
+    if(count >= TOTAL){
+      clearInterval(timer);
+      baseline = samples.reduce((a,b)=>a+b,0)/samples.length;
+      const stddev = Math.sqrt(samples.reduce((s,v)=>s+(v-baseline)**2,0)/samples.length);
+      log(`Baseline set: mean=${baseline.toFixed(5)} σ=${stddev.toFixed(5)} (${count} samples)`,'ok');
+      log('Baseline captured. Ready to scan.','ok');
+      calibrating = false;
+      $('btn-calibrate').disabled = false;
+      $('btn-scan').disabled = false;
+      setPill('idle'); setDot('active');
+    }
+  }, INTERVAL);
+  startDraw();
+};
+
+$('btn-scan').onclick = async function(){
+  if(!baseline){ log('Calibrate first.','warn'); return; }
+  if(!await initAudio()) return;
+  const freq = parseInt($('freq-slider').value);
+  startPulse(freq);
+  scanning = true;
+  setPill('scan'); setDot('active');
+  log('Active scanning started. Monitoring for changes...','ok');
+  $('btn-scan').disabled = true;
+  $('btn-calibrate').disabled = true;
+  $('btn-stop').disabled = false;
+  startScanLoop(freq);
+  startDraw();
+};
+
+let scanLoopTimer = null;
+function startScanLoop(freq){
+  if(scanLoopTimer) clearInterval(scanLoopTimer);
+  scanLoopTimer = setInterval(()=>{
+    if(!scanning){ clearInterval(scanLoopTimer); return; }
+    const sp = getSpectrum();
+    const b0 = freqToBin(freq-800), b1 = freqToBin(freq+800);
+    const rms = getRMS(sp, b0, b1);
+    const delta = baseline > 0 ? Math.abs(rms - baseline) / baseline : 0;
+    const sens = parseInt($('sensitivity').value);
+    const threshold = sens * 0.004;
+
+    $('m-rms').textContent = rms.toFixed(5);
+    const dEl = $('m-delta');
+    const pct = (delta*100).toFixed(1)+'%';
+    dEl.textContent = pct;
+    dEl.className = 'metric-val' + (delta>threshold*1.5?' alert':delta>threshold*0.7?' warn':'');
+
+    deltaHistory.copyWithin(0,1);
+    deltaHistory[deltaHistory.length-1] = delta;
+
+    if(alertCooldown > 0){ alertCooldown--; }
+    if(delta > threshold && alertCooldown === 0){
+      eventCount++;
+      $('m-events').textContent = eventCount;
+      alertCooldown = 20;
+      const what = delta > threshold*2.5 ? 'LARGE change' : delta > threshold*1.5 ? 'Significant change' : 'Change';
+      log(`${what} detected — Δ=${pct}`,'alert');
+      setDot('alert');
+      $('alert-banner').className='alert-banner show';
+      $('alert-banner').textContent = `⚠ CHANGE DETECTED — ECHO DELTA: ${pct}`;
+      setTimeout(()=>{ $('alert-banner').className='alert-banner'; setDot('active'); }, 3000);
+      sonarTrails.push({angle:sonarAngle, intensity:Math.min(1,delta/threshold), born:Date.now()});
+    }
+  }, 80);
+}
+
+$('btn-stop').onclick = function(){
+  scanning = false; calibrating = false;
+  stopPulse();
+  if(scanLoopTimer) clearInterval(scanLoopTimer);
+  if(animFrame) cancelAnimationFrame(animFrame);
+  setPill('idle'); setDot('offline');
+  $('btn-calibrate').disabled = false;
+  $('btn-scan').disabled = !baseline;
+  $('btn-stop').disabled = true;
+  log('Stopped.','info');
+};
+
+function startDraw(){ if(animFrame) cancelAnimationFrame(animFrame); drawLoop(); }
+function drawLoop(){
+  drawSonar();
+  drawSpectrum();
+  drawDelta();
+  animFrame = requestAnimationFrame(drawLoop);
+}
+
+function drawSonar(){
+  const c = $('sonar-canvas'), ctx = c.getContext('2d');
+  const W=c.width, H=c.height, cx=W/2, cy=H/2, R=cx-4;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0a0c0f'; ctx.fillRect(0,0,W,H);
+
+  ctx.strokeStyle='#1e2830'; ctx.lineWidth=0.5;
+  [0.25,0.5,0.75,1].forEach(f=>{
+    ctx.beginPath(); ctx.arc(cx,cy,R*f,0,Math.PI*2); ctx.stroke();
+  });
+  for(let a=0;a<360;a+=30){
+    const rad=a*Math.PI/180;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(rad)*R,cy+Math.sin(rad)*R); ctx.stroke();
+  }
+
+  sonarTrails = sonarTrails.filter(t=>Date.now()-t.born < 4000);
+  sonarTrails.forEach(t=>{
+    const age=(Date.now()-t.born)/4000;
+    const alpha = (1-age)*t.intensity*0.7;
+    const r = R*(0.3+t.intensity*0.6);
+    const x=cx+Math.cos(t.angle)*r, y=cy+Math.sin(t.angle)*r;
+    const grad=ctx.createRadialGradient(x,y,0,x,y,18);
+    grad.addColorStop(0,`rgba(255,59,59,${alpha})`);
+    grad.addColorStop(1,'rgba(255,59,59,0)');
+    ctx.beginPath(); ctx.arc(x,y,18,0,Math.PI*2);
+    ctx.fillStyle=grad; ctx.fill();
+  });
+
+  if(calibrating||scanning){
+    sonarAngle += 0.04;
+    const sweepLen = Math.PI/2;
+    const grad = ctx.createConicalGradient ? null : null;
+    for(let i=0;i<60;i++){
+      const a = sonarAngle - (i/60)*sweepLen;
+      const alpha = (1-i/60)*0.18;
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,R,a,a+0.055); ctx.closePath();
+      ctx.fillStyle = calibrating ? `rgba(255,184,0,${alpha})` : `rgba(0,255,157,${alpha})`;
+      ctx.fill();
+    }
+    const lx=cx+Math.cos(sonarAngle)*R, ly=cy+Math.sin(sonarAngle)*R;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(lx,ly);
+    ctx.strokeStyle = calibrating ? 'rgba(255,184,0,0.9)' : 'rgba(0,255,157,0.9)';
+    ctx.lineWidth=1.5; ctx.stroke();
+  }
+
+  ctx.strokeStyle='#00ff9d22'; ctx.lineWidth=0.5;
+  ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='#00ff9d'; ctx.beginPath(); ctx.arc(cx,cy,3,0,Math.PI*2); ctx.fill();
+
+  ctx.fillStyle='#3a5060'; ctx.font='9px Share Tech Mono';
+  ['N','E','S','W'].forEach((l,i)=>{
+    const a=i*Math.PI/2-Math.PI/2;
+    ctx.fillText(l,cx+Math.cos(a)*(R+8)-3,cy+Math.sin(a)*(R+8)+3);
+  });
+}
+
+function drawSpectrum(){
+  if(!analyser) return;
+  const c=$('spec-canvas'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#111418'; ctx.fillRect(0,0,W,H);
+  const data=new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(data);
+  const freq = parseInt($('freq-slider').value);
+  const targetBin = freqToBin(freq);
+  const showBins = 200;
+  const startBin = Math.max(0, targetBin - showBins/2);
+  const barW = W/showBins;
+  for(let i=0;i<showBins;i++){
+    const bin = startBin+i;
+    const v = bin < data.length ? data[bin]/255 : 0;
+    const isTarget = Math.abs(bin-targetBin) < 4;
+    const h = v*H;
+    ctx.fillStyle = isTarget ? (v>0.1?'#ff3b3b':'#00ff9d55') : `rgba(0,${Math.floor(150*v+50)},${Math.floor(100*v+80)},0.8)`;
+    ctx.fillRect(i*barW, H-h, barW-1, h);
+  }
+  ctx.strokeStyle='#ff3b3b44'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+  const markerX = showBins/2 * barW;
+  ctx.beginPath(); ctx.moveTo(markerX,0); ctx.lineTo(markerX,H); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#5a7080'; ctx.font='9px Share Tech Mono';
+  ctx.fillText((freq/1000).toFixed(2)+'kHz', markerX+4, 12);
+}
+
+function drawDelta(){
+  const c=$('delta-canvas'),ctx=c.getContext('2d'),W=c.width,H=c.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#111418'; ctx.fillRect(0,0,W,H);
+  if(!scanning && !calibrating){ return; }
+  const sens = parseInt($('sensitivity').value);
+  const threshold = sens * 0.004;
+  ctx.strokeStyle='#1e2830'; ctx.lineWidth=0.5; ctx.setLineDash([4,4]);
+  const thY = H - (threshold/0.15)*H;
+  if(thY>0&&thY<H){ ctx.beginPath(); ctx.moveTo(0,thY); ctx.lineTo(W,thY); ctx.stroke(); }
+  ctx.setLineDash([]);
+  ctx.fillStyle='#ff3b3b22';
+  ctx.fillRect(0, 0, W, Math.min(H, thY));
+
+  ctx.beginPath();
+  const len = deltaHistory.length;
+  for(let i=0;i<len;i++){
+    const x = (i/len)*W;
+    const v = Math.min(deltaHistory[i]/0.15,1);
+    const y = H - v*H;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle='#00ff9d'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.fillStyle='#00ff9d15';
+  ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
+
+  ctx.fillStyle='#5a7080'; ctx.font='9px Share Tech Mono';
+  ctx.fillText('THRESHOLD', 4, thY > 15 ? thY-4 : thY+12);
+}
+</script>
